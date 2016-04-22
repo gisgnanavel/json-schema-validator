@@ -66,6 +66,23 @@ repositories {
     		}
 
   	}
+  	
+publishing {
+    repositories {
+        maven {
+        	credentials(AwsCredentials) {
+		      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
+		      secretKey "${System.getenv('AWS_SECRET_KEY')}"
+                        }
+
+		if(project.version.endsWith('-SNAPSHOT')) {
+        		url "s3://mvn-repos/snapshot"
+            	} else {
+        		url "s3://mvn-repos/release"
+            	}
+                }
+        }
+}
 
 /*
  * List of dependencies
