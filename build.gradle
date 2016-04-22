@@ -56,8 +56,16 @@ project.ext {
  * Repositories to use
  */
 repositories {
-    mavenCentral();
-}
+    mavenCentral()
+    maven {
+        url "s3://mvn-repos/gradle"
+        credentials(AwsCredentials) {
+	      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
+	      secretKey "${System.getenv('AWS_SECRET_KEY')}"
+			}
+    		}
+
+  	}
 
 /*
  * List of dependencies
