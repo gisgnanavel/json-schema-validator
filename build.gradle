@@ -55,34 +55,7 @@ project.ext {
 /*
  * Repositories to use
  */
-repositories {
-    mavenCentral()
-    maven {
-        url "s3://mvn-repos/gradle"
-        credentials(AwsCredentials) {
-	      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
-	      secretKey "${System.getenv('AWS_SECRET_KEY')}"
-			}
-    		}
 
-  	}
-  	
-publishing {
-    repositories {
-        maven {
-        	credentials(AwsCredentials) {
-		      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
-		      secretKey "${System.getenv('AWS_SECRET_KEY')}"
-                        }
-
-		if(project.version.endsWith('-SNAPSHOT')) {
-        		url "s3://mvn-repos/snapshot"
-            	} else {
-        		url "s3://mvn-repos/release"
-            	}
-                }
-        }
-}
 
 /*
  * List of dependencies
@@ -224,6 +197,21 @@ task checkSigningRequirements << {
     if (noDice)
         throw new IllegalStateException("missing required properties for " +
             "upload");
+}
+
+task writeNewPom << {
+    pom {
+        project {
+            inceptionYear '2014'
+            licenses {
+                license {
+                    name 'The Apache Software License, Version 2.0'
+                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution 'repo'
+                }
+            }
+        }
+    }.writeTo("pom.xml")
 }
 
 uploadArchives {
