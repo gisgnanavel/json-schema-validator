@@ -19,6 +19,8 @@
 
 package com.github.fge.jsonschema.keyword.validator.draftv4;
 
+import java.util.EnumSet;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.github.fge.jackson.NodeType;
 import com.github.fge.jsonschema.core.exceptions.ProcessingException;
@@ -27,8 +29,6 @@ import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.github.fge.jsonschema.keyword.validator.AbstractKeywordValidator;
 import com.github.fge.jsonschema.processors.data.FullData;
 import com.github.fge.msgsimple.bundle.MessageBundle;
-
-import java.util.EnumSet;
 
 /**
  * Keyword validator for draft v4's {@code type}
@@ -54,10 +54,30 @@ public final class DraftV4TypeValidator
         final NodeType type
             = NodeType.getNodeType(data.getInstance().getNode());
 
-        if (!types.contains(type))
-            report.error(newMsg(data, bundle, "err.common.typeNoMatch")
-                .putArgument("found", type)
-                .putArgument("expected", toArrayNode(types)));
+        if (!types.contains(type)) {
+        	if (types.contains(NodeType.INTEGER)) {
+        		try {
+        			if (types.contains(NodeType.NUMBER)) {
+        				Double.parseDouble(data.getInstance().getNode().textValue());
+        			} else {
+        				Integer.parseInt(data.getInstance().getNode().textValue());
+        			}
+        			
+        		} catch (NumberFormatException nfe) {
+        			//If its a not a number then add in error list
+        			report.error(newMsg(data, bundle, "err.common.typeNoMatch")
+        	                .putArgument("found", type)
+        	                .putArgument("expected", toArrayNode(types)));
+        		}
+        		
+        		
+        	} else if (!types.contains(NodeType.ARRAY) && !type.equals(NodeType.NULL)) {
+        		report.error(newMsg(data, bundle, "err.common.typeNoMatch")
+    	                .putArgument("found", type)
+    	                .putArgument("expected", toArrayNode(types)));
+        	}
+            
+        }
     }
 
     @Override
