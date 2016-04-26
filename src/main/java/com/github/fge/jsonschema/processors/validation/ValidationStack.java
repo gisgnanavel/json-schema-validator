@@ -31,8 +31,10 @@ import com.google.common.collect.Queues;
 
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayDeque;
 import java.util.Deque;
 
 /**
@@ -67,7 +69,7 @@ final class ValidationStack
     /*
      * Queue of visited contexts
      */
-    private final Deque<Element> validationQueue = Queues.newArrayDeque();
+    private final Deque<Element> validationQueue = new ArrayDeque<>();
 
     /*
      * Head error message when a validation loop is detected
