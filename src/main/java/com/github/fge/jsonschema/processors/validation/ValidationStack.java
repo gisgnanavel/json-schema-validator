@@ -27,8 +27,6 @@ import com.github.fge.jsonschema.core.ref.JsonRef;
 import com.github.fge.jsonschema.core.report.ProcessingMessage;
 import com.github.fge.jsonschema.core.tree.SchemaTree;
 import com.github.fge.jsonschema.processors.data.FullData;
-import com.google.common.collect.Queues;
-
 import javax.annotation.Nullable;
 import javax.annotation.ParametersAreNonnullByDefault;
 
@@ -123,7 +121,7 @@ final class ValidationStack
 
         validationQueue.addLast(new Element(pointer, schemaURIs));
         pointer = ptr;
-        schemaURIs = Queues.newArrayDeque();
+        schemaURIs = new ArrayDeque<>();
         schemaURIs.addLast(schemaURI);
     }
 
