@@ -1,3 +1,10 @@
+import com.amazonaws.auth.AWSCredentialsProviderChain
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper
+import com.amazonaws.auth.EnvironmentVariableCredentialsProvider
+import com.amazonaws.auth.SystemPropertiesCredentialsProvider
+import com.amazonaws.auth.profile.ProfileCredentialsProvider
+import org.ajoberstar.grgit.Grgit
+
 /*
  * Copyright (c) 2014, Francis Galiegue (fgaliegue@gmail.com)
  *
@@ -36,26 +43,76 @@
  * https://github.com/spring-projects/gradle-plugins/tree/master/propdeps-plugin
  */
 
-apply(plugin: "java");
-apply(plugin: "maven");
-apply(plugin: "signing");
-apply(plugin: "osgi");
-apply(plugin: "idea");
-apply(plugin: "eclipse");
 
-group = "com.github.fge";
-version = "2.2.6";
-sourceCompatibility = "1.6";
-targetCompatibility = "1.6"; // defaults to sourceCompatibility
+group = "com.oneview";
+
+buildscript {
+    ext.awsCoreVersion = '1.11.51'
+
+    repositories {
+        mavenCentral()
+        jcenter()
+    }
+
+    dependencies {
+        classpath(
+                "com.amazonaws:aws-java-sdk-core:$awsCoreVersion",
+                'org.ajoberstar:gradle-git:1.5.1'
+        )
+    }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+apply plugin: "java"
+apply plugin: "maven-publish"
+apply plugin: 'org.ajoberstar.grgit'
+
+sourceCompatibility = "1.8";
+def scmRepo = Grgit.open(currentDir: projectDir)
+version scmRepo.describe()
+
+def isSnapshot = version.contains('-')
+def repoSuffix = isSnapshot ? 'snapshots' : 'releases'
 
 project.ext {
     description = "A Java implementation of the JSON Schema specification";
 };
 
-/*
- * Repositories to use
- */
 
+def awsCredentials = new AWSCredentialsProviderChain(
+        new EnvironmentVariableCredentialsProvider(),
+        new SystemPropertiesCredentialsProvider(),
+        new ProfileCredentialsProvider("ovc"),
+        new ProfileCredentialsProvider(),
+        new EC2ContainerCredentialsProviderWrapper()
+).credentials
+
+publishing {
+    publications {
+        publishJar(MavenPublication) {
+            from components.java
+        }
+    }
+
+    repositories {
+        maven {
+            url "s3://ovc-gradle-repo/$repoSuffix"
+            credentials(AwsCredentials) {
+                accessKey awsCredentials.AWSAccessKeyId
+                secretKey awsCredentials.AWSSecretKey
+            }
+        }
+    }
+
+}
+
+wrapper {
+    gradleVersion '2.13'
+}
 
 /*
  * List of dependencies
@@ -162,128 +219,5 @@ artifacts {
     archives sourcesJar;
     archives javadocJar;
     archives libJar;
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = "1.11";
-    distributionUrl = "http://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip";
-}
-
-task pom << {
-    pom {}.writeTo("${projectDir}/pom.xml");
-}
-
-/*
- * SIGNING
- */
-
-project.ext {
-    gitrwscm = sprintf("git@github.com:fge/%s", name);
-    gitroscm = sprintf("https://github.com/fge/%s.git", name);
-    projectURL = sprintf("https://github.com/fge/%s", name);
-    sonatypeStaging = "https://oss.sonatype.org/service/local/staging/deploy/maven2/";
-    sonatypeSnapshots = "https://oss.sonatype.org/content/repositories/snapshots/";
-};
-
-task checkSigningRequirements << {
-    def requiredProperties = [ "sonatypeUsername", "sonatypePassword" ];
-    def noDice = false;
-    requiredProperties.each {
-        if (project.properties[it] == null) {
-            noDice = true;
-            System.err.printf("property \"%s\" is not defined!", it);
-        }
-    }
-    if (noDice)
-        throw new IllegalStateException("missing required properties for " +
-            "upload");
-}
-
-task writeNewPom << {
-    pom {
-        project {
-            inceptionYear '2014'
-            licenses {
-                license {
-                    name 'The Apache Software License, Version 2.0'
-                    url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    distribution 'repo'
-                }
-            }
-        }
-    }.writeTo("pom.xml")
-}
-
-uploadArchives {
-    dependsOn(checkSigningRequirements);
-    repositories {
-        mavenDeployer {
-            beforeDeployment {
-                MavenDeployment deployment -> signing.signPom(deployment);
-            }
-
-            repository(url: "${sonatypeStaging}") {
-                authentication(
-                    userName: project.properties["sonatypeUsername"],
-                    password: project.properties["sonatypePassword"]
-                );
-            }
-
-            snapshotRepository(url: "${sonatypeSnapshots}") {
-                authentication(
-                    userName: project.properties["sonatypeUsername"],
-                    password: project.properties["sonatypePassword"]
-                );
-            }
-        }
-    }
-}
-
-/*
- * Configure pom.xml on install, uploadArchives
- */
-[
-    install.repositories.mavenInstaller,
-    uploadArchives.repositories.mavenDeployer
-]*.pom*.whenConfigured { pom ->
-    pom.project {
-        name "${name}";
-        packaging "jar";
-        description "${description}";
-        url "${projectURL}";
-
-        scm {
-            url "${gitrwscm}";
-            connection "${gitrwscm}";
-            developerConnection "${gitroscm}";
-        }
-
-        licenses {
-            license {
-                name "Lesser General Public License, version 3 or greater";
-                url "http://www.gnu.org/licenses/lgpl.html";
-                distribution "repo";
-            };
-            license {
-                name "Apache Software License, version 2.0";
-                url "http://www.apache.org/licenses/LICENSE-2.0";
-                distribution "repo";
-            }
-        }
-
-        developers {
-            developer {
-                id "fge";
-                name "Francis Galiegue";
-                email "fgaliegue@gmail.com";
-            }
-        }
-    }
-}
-
-ext.forRelease = !version.endsWith("-SNAPSHOT");
-signing {
-    required { forRelease && gradle.taskGraph.hasTask("uploadArchives") };
-    sign configurations.archives;
 }
 
