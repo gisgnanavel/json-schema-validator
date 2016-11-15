@@ -110,10 +110,6 @@ publishing {
 
 }
 
-wrapper {
-    gradleVersion '2.13'
-}
-
 /*
  * List of dependencies
  */
