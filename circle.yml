@@ -1,0 +1,21 @@
+machine:
+  java:
+    version: oraclejdk8
+
+dependencies:
+  override:
+    - 'true'
+
+test:
+  override:
+    - ./gradlew build --daemon
+
+deployment:
+  release:
+    branch: master
+    commands:
+      - ./gradlew publish --daemon
+  snapshot:
+    branch: develop
+    commands:
+      - ./gradlew publish --daemon
