@@ -8,14 +8,14 @@ dependencies:
 
 test:
   override:
-    - ./gradlew build --daemon
+    - ./gradlew build -x test --daemon
 
 deployment:
   release:
     branch: master
     commands:
-      - ./gradlew publish --daemon
+      - ./gradlew publish -x test --daemon
   snapshot:
     branch: develop
     commands:
-      - ./gradlew publish --daemon
+      - ./gradlew publish -x test --daemon
