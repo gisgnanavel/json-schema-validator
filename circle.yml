@@ -15,6 +15,10 @@ deployment:
     branch: master
     commands:
       - ./gradlew publish -x test --daemon
+  rc:
+    branch: /release-.*/
+    commands:
+      - ./gradlew publish -x test --daemon
   snapshot:
     branch: develop
     commands:
