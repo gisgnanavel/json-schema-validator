@@ -36,52 +36,46 @@
  * https://github.com/spring-projects/gradle-plugins/tree/master/propdeps-plugin
  */
 
-apply(plugin: "java");
-apply(plugin: "maven");
-apply(plugin: "signing");
-apply(plugin: "osgi");
-apply(plugin: "idea");
-apply(plugin: "eclipse");
 
-group = "com.github.fge";
-version = "2.2.6";
-sourceCompatibility = "1.6";
-targetCompatibility = "1.6"; // defaults to sourceCompatibility
+group = "com.oneview";
+
+buildscript {
+
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath(
+                'org.ajoberstar:gradle-git:1.5.1',
+                'com.oneview:gradle-plugin:1.0.0'
+        )
+    }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+apply plugin: "java"
+apply plugin: "maven-publish"
+apply plugin: 'com.oneview.buildplugin'
+
+sourceCompatibility = "1.8";
 
 project.ext {
     description = "A Java implementation of the JSON Schema specification";
 };
 
-/*
- * Repositories to use
- */
-repositories {
-    mavenCentral()
-    maven {
-        url "s3://mvn-repos/gradle"
-        credentials(AwsCredentials) {
-	      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
-	      secretKey "${System.getenv('AWS_SECRET_KEY')}"
-			}
-    		}
 
-  	}
-  	
 publishing {
-    repositories {
-        maven {
-        	credentials(AwsCredentials) {
-		      accessKey "${System.getenv('AWS_ACCESS_KEY')}"
-		      secretKey "${System.getenv('AWS_SECRET_KEY')}"
-                        }
-
-		if(project.version.endsWith('-SNAPSHOT')) {
-        		url "s3://mvn-repos/snapshot"
-            	} else {
-        		url "s3://mvn-repos/release"
-            	}
-                }
+    publications {
+        publishJar(MavenPublication) {
+            from components.java
         }
+    }
 }
 
 /*
@@ -189,113 +183,5 @@ artifacts {
     archives sourcesJar;
     archives javadocJar;
     archives libJar;
-}
-
-task wrapper(type: Wrapper) {
-    gradleVersion = "1.11";
-    distributionUrl = "http://services.gradle.org/distributions/gradle-${gradleVersion}-all.zip";
-}
-
-task pom << {
-    pom {}.writeTo("${projectDir}/pom.xml");
-}
-
-/*
- * SIGNING
- */
-
-project.ext {
-    gitrwscm = sprintf("git@github.com:fge/%s", name);
-    gitroscm = sprintf("https://github.com/fge/%s.git", name);
-    projectURL = sprintf("https://github.com/fge/%s", name);
-    sonatypeStaging = "https://oss.sonatype.org/service/local/staging/deploy/maven2/";
-    sonatypeSnapshots = "https://oss.sonatype.org/content/repositories/snapshots/";
-};
-
-task checkSigningRequirements << {
-    def requiredProperties = [ "sonatypeUsername", "sonatypePassword" ];
-    def noDice = false;
-    requiredProperties.each {
-        if (project.properties[it] == null) {
-            noDice = true;
-            System.err.printf("property \"%s\" is not defined!", it);
-        }
-    }
-    if (noDice)
-        throw new IllegalStateException("missing required properties for " +
-            "upload");
-}
-
-uploadArchives {
-    dependsOn(checkSigningRequirements);
-    repositories {
-        mavenDeployer {
-            beforeDeployment {
-                MavenDeployment deployment -> signing.signPom(deployment);
-            }
-
-            repository(url: "${sonatypeStaging}") {
-                authentication(
-                    userName: project.properties["sonatypeUsername"],
-                    password: project.properties["sonatypePassword"]
-                );
-            }
-
-            snapshotRepository(url: "${sonatypeSnapshots}") {
-                authentication(
-                    userName: project.properties["sonatypeUsername"],
-                    password: project.properties["sonatypePassword"]
-                );
-            }
-        }
-    }
-}
-
-/*
- * Configure pom.xml on install, uploadArchives
- */
-[
-    install.repositories.mavenInstaller,
-    uploadArchives.repositories.mavenDeployer
-]*.pom*.whenConfigured { pom ->
-    pom.project {
-        name "${name}";
-        packaging "jar";
-        description "${description}";
-        url "${projectURL}";
-
-        scm {
-            url "${gitrwscm}";
-            connection "${gitrwscm}";
-            developerConnection "${gitroscm}";
-        }
-
-        licenses {
-            license {
-                name "Lesser General Public License, version 3 or greater";
-                url "http://www.gnu.org/licenses/lgpl.html";
-                distribution "repo";
-            };
-            license {
-                name "Apache Software License, version 2.0";
-                url "http://www.apache.org/licenses/LICENSE-2.0";
-                distribution "repo";
-            }
-        }
-
-        developers {
-            developer {
-                id "fge";
-                name "Francis Galiegue";
-                email "fgaliegue@gmail.com";
-            }
-        }
-    }
-}
-
-ext.forRelease = !version.endsWith("-SNAPSHOT");
-signing {
-    required { forRelease && gradle.taskGraph.hasTask("uploadArchives") };
-    sign configurations.archives;
 }
 
