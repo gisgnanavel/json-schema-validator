@@ -49,7 +49,7 @@ buildscript {
     dependencies {
         classpath(
                 'org.ajoberstar:gradle-git:1.5.1',
-                'com.oneview:gradle-plugin:1.0.0'
+                'com.oneview:gradle-plugin:1.1.0'
         )
     }
 }
